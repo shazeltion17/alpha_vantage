@@ -1,0 +1,45 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from alpha_vantage.timeseries import TimeSeries
+from alpha_vantage.techindicators import TechIndicators
+
+
+def get_data(symbol):
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from alpha_vantage.timeseries import TimeSeries
+    from alpha_vantage.techindicators import TechIndicators
+    # Technical Indicators
+    ti = TechIndicators(key='90SI5AD8BUL571ZI', output_format='pandas')
+    sma15, _ = ti.get_sma(symbol=symbol, interval='daily',time_period=15)
+    sma30, _ = ti.get_sma(symbol=symbol, interval='daily', time_period=30)
+    sma60, _ = ti.get_sma(symbol=symbol, interval='daily', time_period=60)
+    sma15 = sma15['SMA']
+    sma30 = sma30['SMA']
+    sma60 = sma60['SMA']
+    ts = TimeSeries(key='90SI5AD8BUL571ZI', output_format='pandas')
+    close = ts.get_daily(symbol=symbol, outputsize='full')[0]['close']
+    volume = ts.get_daily(symbol=symbol, outputsize='full')[0]['volume']  # compact/full
+
+    #Find a Taget
+    target = (((sma15 - sma15.shift()) / sma15.shift()) < 0) & (((sma30 - sma30.shift()) / sma30.shift()) < 0) & (((sma60 - sma60.shift()) / sma60.shift()) < 0)
+    #Create Items in the datbase
+    target.name = 'target'
+    sma15.name = 'sma15'
+    sma30.name = 'sma30'
+    sma60.name = 'sma60'
+    data = pd.DataFrame(pd.concat([close, volume, target, sma15, sma30, sma60], axis=1))
+    data['sellsign'] = (data['sma15'] > data['sma30']) & (data['sma15'].shift(-1) < data['sma30'].shift(-1))
+    data['buysign'] = (data['sma15'] < data['sma30']) & (data['sma15'].shift(-1) > data['sma30'].shift(-1))
+    #Print to a CSV File
+    data.to_csv('sam1.csv')
+
+    return data
+#Pick a Ticker symbol
+symbol = 'AAPL'
+data = get_data(symbol)
+
+
+#connection.deploy('algoTrade' , get_data , 'deploys my model',override=True)
